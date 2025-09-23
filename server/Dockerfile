@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set work directory inside container
-WORKDIR /app
+WORKDIR /
 
 # Install system dependencies (optional but useful for psycopg2, etc.)
 RUN apt-get update \
@@ -26,4 +26,4 @@ COPY . .
 EXPOSE 8000
 
 # Run the app with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
