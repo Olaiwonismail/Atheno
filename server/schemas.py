@@ -56,9 +56,13 @@ class QuizSubmission(QuizSubmissionBase):
         from_attributes = True
 
 # Essay Schemas
+class RubricItem(BaseModel):
+    description: str
+    max_score: int
+
 class EssayBase(BaseModel):
     prompt: str
-    rubric: Dict[str, Any]
+    rubric: Dict[str, RubricItem]
 
 class EssayCreate(EssayBase):
     pass
