@@ -1,0 +1,27 @@
+ 
+# Production Dependencies
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+python-jose[cryptography]
+firebase-admin
+openai
+python-dotenv
+pydantic
+python-multipart
+alembic
+
+# Development & Testing
+pytest
+pytest-asyncio
+httpx
+pytest-cov
+black
+isort
+flake8
+pre-commit
+groq 
+# Debugging
+ipdb
+debugpy

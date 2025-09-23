@@ -1,0 +1,120 @@
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+# User Schemas
+class UserBase(BaseModel):
+    email: str
+    name: str
+    role: str
+
+class UserCreate(UserBase):
+    firebase_uid: str
+
+class User(UserBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Quiz Schemas
+class Question(BaseModel):
+    question_text: str
+    options: List[str]
+    correct_answer: int
+
+class QuizBase(BaseModel):
+    title: str
+    questions: List[Question]
+
+class QuizCreate(QuizBase):
+    pass
+
+class Quiz(QuizBase):
+    id: int
+    teacher_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class QuizSubmissionBase(BaseModel):
+    answers: Dict[str, int]  # question_id -> answer_index
+
+class QuizSubmissionCreate(QuizSubmissionBase):
+    pass
+
+class QuizSubmission(QuizSubmissionBase):
+    id: int
+    quiz_id: int
+    student_id: int
+    score: int
+    submitted_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Essay Schemas
+class EssayBase(BaseModel):
+    prompt: str
+    rubric: Dict[str, Any]
+
+class EssayCreate(EssayBase):
+    pass
+
+class Essay(EssayBase):
+    id: int
+    teacher_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class EssaySubmissionBase(BaseModel):
+    text: str
+
+class EssaySubmissionCreate(EssaySubmissionBase):
+    pass
+
+class EssaySubmission(EssaySubmissionBase):
+    id: int
+    essay_id: int
+    student_id: int
+    ai_feedback: Optional[Dict[str, Any]] = None
+    rubric_scores: Optional[Dict[str, Any]] = None
+    submitted_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Analytics Schemas
+class QuizAnalytics(BaseModel):
+    quiz_id: int
+    average_score: float
+    question_analytics: List[Dict[str, Any]]
+    student_performance: List[Dict[str, Any]]
+
+class EssayAnalytics(BaseModel):
+    essay_id: int
+    average_score: float
+    common_strengths: List[str]
+    common_weaknesses: List[str]
+    student_performance: List[Dict[str, Any]]
+
+class StudentAnalytics(BaseModel):
+    student_id: int
+    average_quiz_score: float
+    average_essay_score: float
+    recent_submissions: List[Dict[str, Any]]
+
+# Auth Schemas
+class FirebaseUser(BaseModel):
+    uid: str
+    email: str
+    name: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: User
