@@ -22,7 +22,7 @@ app.include_router(auth, prefix="/auth", tags=["auth"])
 app.include_router(quizzes, prefix="/quizzes", tags=["quizzes"])
 app.include_router(essays, prefix="/essays", tags=["essays"])
 app.include_router(analytics, prefix="/analytics", tags=["analytics"])
-app.inpp.include_router(teacher, prefix="/teacher", tags=["teacher"])
+app.include_router(teacher, prefix="/teacher", tags=["teacher"])
 @app.get("/")
 async def root():
     return {"message": "Atheno Backend API"}
