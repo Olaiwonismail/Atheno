@@ -41,32 +41,32 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# @auth.post("/login")
-# async def login(request: LoginRequest):
-#     try:
-#         url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={settings.FIREBASE_API_KEY}"
+@auth.post("/login")
+async def login(request: LoginRequest):
+    try:
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={settings.FIREBASE_API_KEY}"
         
-#         payload = {
-#             "email": request.email,
-#             "password": request.password,
-#             "returnSecureToken": True
-#         }
+        payload = {
+            "email": request.email,
+            "password": request.password,
+            "returnSecureToken": True
+        }
         
-#         res = requests.post(url, json=payload)
-#         data = res.json()
+        res = requests.post(url, json=payload)
+        data = res.json()
         
-#         if res.status_code != 200:
-#             raise HTTPException(status_code=401, detail=data.get("error", {}).get("message", "Login failed"))
+        if res.status_code != 200:
+            raise HTTPException(status_code=401, detail=data.get("error", {}).get("message", "Login failed"))
         
-#         return {
-#             "idToken": data["idToken"],          # Firebase ID token
-#             "refreshToken": data["refreshToken"],# to refresh session
-#             "expiresIn": data["expiresIn"],      # in seconds
-#             "localId": data["localId"],          # Firebase user ID
-#             "email": data["email"]
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
+        return {
+            "idToken": data["idToken"],          # Firebase ID token
+            "refreshToken": data["refreshToken"],# to refresh session
+            "expiresIn": data["expiresIn"],      # in seconds
+            "localId": data["localId"],          # Firebase user ID
+            "email": data["email"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
 
 
 @auth.get("/me", response_model=User)
