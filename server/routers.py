@@ -246,13 +246,12 @@ async def get_student_analytics(
         recent_submissions=recent_submissions
     )
 
-# Add to main.py
-
 @teacher.get("/quizzes", response_model=List[Quiz])
 async def get_teacher_quizzes(
     current_user: User = Depends(get_teacher_user),
     db: Session = Depends(get_db)
 ):
+    """Get all quizzes created by the current teacher"""
     quizzes = db.query(Quiz).filter(Quiz.teacher_id == current_user.id).all()
     return quizzes
 
@@ -261,5 +260,6 @@ async def get_teacher_essays(
     current_user: User = Depends(get_teacher_user),
     db: Session = Depends(get_db)
 ):
+    """Get all essays created by the current teacher"""
     essays = db.query(Essay).filter(Essay.teacher_id == current_user.id).all()
-    return essays            
+    return essays
