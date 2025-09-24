@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import requests
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from config import settings
 from database import get_db
 
@@ -23,8 +24,9 @@ quizzes = APIRouter()
 essays = APIRouter()
 analytics = APIRouter()
 teacher = APIRouter()
+student = APIRouter()  # New student router
 
-# Auth routes
+# Auth routes (unchanged)
 @auth.post("/register", response_model=schemas.User)
 async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     existing_user = get_user_by_firebase_uid(db, user_data.firebase_uid)
@@ -57,10 +59,10 @@ async def login(request: LoginRequest):
             raise HTTPException(status_code=401, detail=data.get("error", {}).get("message", "Login failed"))
         
         return {
-            "idToken": data["idToken"],          # Firebase ID token
-            "refreshToken": data["refreshToken"],# to refresh session
-            "expiresIn": data["expiresIn"],      # in seconds
-            "localId": data["localId"],          # Firebase user ID
+            "idToken": data["idToken"],
+            "refreshToken": data["refreshToken"],
+            "expiresIn": data["expiresIn"],
+            "localId": data["localId"],
             "email": data["email"]
         }
     except Exception as e:
@@ -70,7 +72,7 @@ async def login(request: LoginRequest):
 async def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
-# Quiz routes
+# Quiz routes (unchanged)
 @quizzes.post("/", response_model=schemas.Quiz)
 async def create_new_quiz(
     quiz_data: schemas.QuizCreate,
@@ -101,7 +103,7 @@ async def submit_quiz_answers(
     submission_dict.update({"quiz_id": quiz_id, "student_id": current_user.id})
     return create_quiz_submission(db, submission_dict)
 
-# Essay routes
+# Essay routes (unchanged)
 @essays.post("/", response_model=schemas.Essay)
 async def create_essay_prompt(
     essay_data: schemas.EssayCreate,
@@ -145,7 +147,7 @@ async def generate_ai_feedback(
     db.commit()
     return {"feedback": new_feedback}
 
-# Analytics routes
+# Analytics routes (unchanged)
 @analytics.get("/quiz/{quiz_id}", response_model=schemas.QuizAnalytics)
 async def get_quiz_analytics(
     quiz_id: int,
@@ -243,7 +245,7 @@ async def get_student_analytics(
         recent_submissions=recent_submissions
     )
 
-# Teacher routes
+# Teacher routes (unchanged)
 @teacher.get("/quizzes", response_model=List[schemas.Quiz])
 async def get_teacher_quizzes(
     current_user: models.User = Depends(get_teacher_user),
@@ -261,3 +263,145 @@ async def get_teacher_essays(
     """Get all essays created by the current teacher"""
     essays = db.query(models.Essay).filter(models.Essay.teacher_id == current_user.id).all()
     return essays
+
+# Student routes - NEW
+class DashboardResponse(BaseModel):
+    pending_quizzes: int
+    pending_essays: int
+    completed_assignments: int
+    pending_quizzes_list: List[schemas.Quiz]
+    pending_essays_list: List[schemas.Essay]
+    recent_activity: List[dict]
+
+@student.get("/dashboard", response_model=DashboardResponse)
+async def get_student_dashboard(
+    current_user: models.User = Depends(get_student_user),
+    db: Session = Depends(get_db)
+):
+    """Get student dashboard data"""
+    
+    # Get all quizzes and essays
+    all_quizzes = db.query(models.Quiz).all()
+    all_essays = db.query(models.Essay).all()
+    
+    # Get student's submissions
+    quiz_submissions = db.query(models.QuizSubmission).filter(
+        models.QuizSubmission.student_id == current_user.id
+    ).all()
+    
+    essay_submissions = db.query(models.EssaySubmission).filter(
+        models.EssaySubmission.student_id == current_user.id
+    ).all()
+    
+    # Find pending quizzes (quizzes not submitted by student)
+    submitted_quiz_ids = [sub.quiz_id for sub in quiz_submissions]
+    pending_quizzes = [quiz for quiz in all_quizzes if quiz.id not in submitted_quiz_ids]
+    
+    # Find pending essays (essays not submitted by student)
+    submitted_essay_ids = [sub.essay_id for sub in essay_submissions]
+    pending_essays = [essay for essay in all_essays if essay.id not in submitted_essay_ids]
+    
+    # Calculate completed assignments
+    completed_assignments = len(quiz_submissions) + len(essay_submissions)
+    
+    # Get recent activity (combine quiz and essay submissions)
+    recent_activity = []
+    
+    # Add quiz submissions to recent activity
+    for sub in quiz_submissions:
+        recent_activity.append({
+            "type": "quiz",
+            "id": sub.id,
+            "title": f"Quiz: {sub.quiz.title}",
+            "score": sub.score,
+            "submitted_at": sub.submitted_at,
+            "status": "completed"
+        })
+    
+    # Add essay submissions to recent activity
+    for sub in essay_submissions:
+        recent_activity.append({
+            "type": "essay",
+            "id": sub.id,
+            "title": f"Essay: {sub.essay.prompt[:50]}...",
+            "score": sub.ai_feedback.get('overall_score', 'Pending') if sub.ai_feedback else 'Pending',
+            "submitted_at": sub.submitted_at,
+            "status": "completed"
+        })
+    
+    # Sort recent activity by submission date (newest first)
+    recent_activity.sort(key=lambda x: x["submitted_at"], reverse=True)
+    recent_activity = recent_activity[:10]  # Limit to 10 most recent
+    
+    return DashboardResponse(
+        pending_quizzes=len(pending_quizzes),
+        pending_essays=len(pending_essays),
+        completed_assignments=completed_assignments,
+        pending_quizzes_list=pending_quizzes,
+        pending_essays_list=pending_essays,
+        recent_activity=recent_activity
+    )
+
+@student.get("/quizzes/available", response_model=List[schemas.Quiz])
+async def get_available_quizzes(
+    current_user: models.User = Depends(get_student_user),
+    db: Session = Depends(get_db)
+):
+    """Get all quizzes available for the student (not submitted yet)"""
+    
+    # Get all quizzes
+    all_quizzes = db.query(models.Quiz).all()
+    
+    # Get student's submitted quiz IDs
+    submitted_quiz_ids = db.query(models.QuizSubmission.quiz_id).filter(
+        models.QuizSubmission.student_id == current_user.id
+    ).all()
+    submitted_quiz_ids = [qid for (qid,) in submitted_quiz_ids]
+    
+    # Filter out quizzes that student has already submitted
+    available_quizzes = [quiz for quiz in all_quizzes if quiz.id not in submitted_quiz_ids]
+    
+    return available_quizzes
+
+@student.get("/essays/available", response_model=List[schemas.Essay])
+async def get_available_essays(
+    current_user: models.User = Depends(get_student_user),
+    db: Session = Depends(get_db)
+):
+    """Get all essays available for the student (not submitted yet)"""
+    
+    # Get all essays
+    all_essays = db.query(models.Essay).all()
+    
+    # Get student's submitted essay IDs
+    submitted_essay_ids = db.query(models.EssaySubmission.essay_id).filter(
+        models.EssaySubmission.student_id == current_user.id
+    ).all()
+    submitted_essay_ids = [eid for (eid,) in submitted_essay_ids]
+    
+    # Filter out essays that student has already submitted
+    available_essays = [essay for essay in all_essays if essay.id not in submitted_essay_ids]
+    
+    return available_essays
+
+@student.get("/submissions/quizzes", response_model=List[schemas.QuizSubmission])
+async def get_student_quiz_submissions(
+    current_user: models.User = Depends(get_student_user),
+    db: Session = Depends(get_db)
+):
+    """Get all quiz submissions by the student"""
+    submissions = db.query(models.QuizSubmission).filter(
+        models.QuizSubmission.student_id == current_user.id
+    ).all()
+    return submissions
+
+@student.get("/submissions/essays", response_model=List[schemas.EssaySubmission])
+async def get_student_essay_submissions(
+    current_user: models.User = Depends(get_student_user),
+    db: Session = Depends(get_db)
+):
+    """Get all essay submissions by the student"""
+    submissions = db.query(models.EssaySubmission).filter(
+        models.EssaySubmission.student_id == current_user.id
+    ).all()
+    return submissions

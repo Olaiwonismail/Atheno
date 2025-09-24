@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, Base
-from routers import auth, quizzes, essays, analytics,teacher
+from routers import auth, quizzes, essays, analytics,teacher,student
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -23,6 +23,7 @@ app.include_router(quizzes, prefix="/quizzes", tags=["quizzes"])
 app.include_router(essays, prefix="/essays", tags=["essays"])
 app.include_router(analytics, prefix="/analytics", tags=["analytics"])
 app.include_router(teacher, prefix="/teacher", tags=["teacher"])
+app.include_router(student, prefix="/student", tags=["student"])
 @app.get("/")
 async def root():
     return {"message": "Atheno Backend API"}

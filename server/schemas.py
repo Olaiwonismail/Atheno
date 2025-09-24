@@ -122,3 +122,20 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+
+# Dashboard Schemas - NEW
+class RecentActivity(BaseModel):
+    type: str  # "quiz" or "essay"
+    id: int
+    title: str
+    score: Any  # Can be int or str like "Pending"
+    submitted_at: datetime
+    status: str
+
+class DashboardResponse(BaseModel):
+    pending_quizzes: int
+    pending_essays: int
+    completed_assignments: int
+    pending_quizzes_list: List[Quiz]
+    pending_essays_list: List[Essay]
+    recent_activity: List[Dict[str, Any]]
