@@ -18,7 +18,7 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-# Quiz Schemas
+# Quiz Schemas - FIXED
 class Question(BaseModel):
     question_text: str
     options: List[str]
@@ -26,7 +26,7 @@ class Question(BaseModel):
 
 class QuizBase(BaseModel):
     title: str
-    questions: List[Question]
+    questions: List[Dict[str, Any]]  # Changed from List[Question] to handle JSON
 
 class QuizCreate(QuizBase):
     pass
@@ -55,14 +55,14 @@ class QuizSubmission(QuizSubmissionBase):
     class Config:
         from_attributes = True
 
-# Essay Schemas
+# Essay Schemas - FIXED
 class RubricItem(BaseModel):
     description: str
     max_score: int
 
 class EssayBase(BaseModel):
     prompt: str
-    rubric: Dict[str, RubricItem]
+    rubric: Dict[str, Any]  # Changed from Dict[str, RubricItem] to handle JSON
 
 class EssayCreate(EssayBase):
     pass
@@ -122,20 +122,3 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
-
-
-class QuizResponse(QuizBase):
-    id: int
-    teacher_id: int
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class EssayResponse(EssayBase):
-    id: int
-    teacher_id: int
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True    
