@@ -22,7 +22,7 @@ auth = APIRouter()
 quizzes = APIRouter()
 essays = APIRouter()
 analytics = APIRouter()
-
+teacher =  APIRouter()
 # Auth routes
 @auth.post("/register", response_model=User)
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -244,3 +244,21 @@ async def get_student_analytics(
         average_essay_score=avg_essay_score,
         recent_submissions=recent_submissions
     )
+
+# Add to main.py
+
+@teacher.get("/quizzes", response_model=List[Quiz])
+async def get_teacher_quizzes(
+    current_user: User = Depends(get_teacher_user),
+    db: Session = Depends(get_db)
+):
+    quizzes = db.query(Quiz).filter(Quiz.teacher_id == current_user.id).all()
+    return quizzes
+
+@teacher.get("/essays", response_model=List[Essay])
+async def get_teacher_essays(
+    current_user: User = Depends(get_teacher_user),
+    db: Session = Depends(get_db)
+):
+    essays = db.query(Essay).filter(Essay.teacher_id == current_user.id).all()
+    return essays            
