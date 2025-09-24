@@ -122,3 +122,20 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+
+
+class QuizResponse(QuizBase):
+    id: int
+    teacher_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class EssayResponse(EssayBase):
+    id: int
+    teacher_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True    

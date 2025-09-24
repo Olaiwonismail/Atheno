@@ -7,7 +7,7 @@ from config import settings
 from database import get_db
 from models import User, Quiz, QuizSubmission, Essay, EssaySubmission
 from schemas import (
-    User, UserCreate, Quiz, QuizCreate, QuizSubmission, QuizSubmissionCreate,
+    EssayResponse, QuizResponse, User, UserCreate, Quiz, QuizCreate, QuizSubmission, QuizSubmissionCreate,
     Essay, EssayCreate, EssaySubmission, EssaySubmissionCreate,
     QuizAnalytics, EssayAnalytics, StudentAnalytics
 )
@@ -246,7 +246,9 @@ async def get_student_analytics(
         recent_submissions=recent_submissions
     )
 
-@teacher.get("/quizzes", response_model=List[Quiz])
+
+
+@teacher.get("/quizzes", response_model=List[QuizResponse])
 async def get_teacher_quizzes(
     current_user: User = Depends(get_teacher_user),
     db: Session = Depends(get_db)
@@ -255,7 +257,7 @@ async def get_teacher_quizzes(
     quizzes = db.query(Quiz).filter(Quiz.teacher_id == current_user.id).all()
     return quizzes
 
-@teacher.get("/essays", response_model=List[Essay])
+@teacher.get("/essays", response_model=List[EssayResponse])
 async def get_teacher_essays(
     current_user: User = Depends(get_teacher_user),
     db: Session = Depends(get_db)
