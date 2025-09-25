@@ -1,8 +1,5 @@
 # Use an official Python image
-FROM gcr.io/distroless/python3-debian11
-# use gcr.io/distroless/python3-debian11 for a minimal image without package manager
-
-
+FROM python:3.11-slim
 
 # Set environment vars
 ENV PYTHONDONTWRITEBYTECODE=1
