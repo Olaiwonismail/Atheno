@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Optional
@@ -405,3 +406,267 @@ async def get_student_essay_submissions(
         models.EssaySubmission.student_id == current_user.id
     ).all()
     return submissions
+
+
+@teacher.get("/analytics/overview", response_model=schemas.TeacherOverviewResponse)
+async def get_teacher_overview(
+    current_user: models.User = Depends(get_teacher_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive overview for teacher dashboard"""
+    
+    # Get teacher's quizzes and essays
+    teacher_quizzes = db.query(models.Quiz).filter(models.Quiz.teacher_id == current_user.id).all()
+    teacher_essays = db.query(models.Essay).filter(models.Essay.teacher_id == current_user.id).all()
+    
+    quiz_ids = [quiz.id for quiz in teacher_quizzes]
+    essay_ids = [essay.id for essay in teacher_essays]
+    
+    # Get all submissions for teacher's assignments
+    quiz_submissions = db.query(models.QuizSubmission).filter(
+        models.QuizSubmission.quiz_id.in_(quiz_ids)
+    ).all() if quiz_ids else []
+    
+    essay_submissions = db.query(models.EssaySubmission).filter(
+        models.EssaySubmission.essay_id.in_(essay_ids)
+    ).all() if essay_ids else []
+    
+    # Calculate total students (unique students who submitted)
+    student_ids = set()
+    for sub in quiz_submissions:
+        student_ids.add(sub.student_id)
+    for sub in essay_submissions:
+        student_ids.add(sub.student_id)
+    
+    total_students = len(student_ids)
+    
+    # Calculate average score
+    total_score = 0
+    total_submissions_with_score = 0
+    
+    for sub in quiz_submissions:
+        total_score += sub.score
+        total_submissions_with_score += 1
+    
+    for sub in essay_submissions:
+        if sub.ai_feedback and 'overall_score' in sub.ai_feedback:
+            total_score += sub.ai_feedback['overall_score']
+            total_submissions_with_score += 1
+        else:
+            # Default score for essays without feedback
+            total_score += 70
+            total_submissions_with_score += 1
+    
+    average_score = total_score / total_submissions_with_score if total_submissions_with_score > 0 else 0
+    
+    # Calculate completion rate
+    total_assignments = len(teacher_quizzes) + len(teacher_essays)
+    total_expected_submissions = total_assignments * total_students if total_students > 0 else 0
+    actual_submissions = len(quiz_submissions) + len(essay_submissions)
+    completion_rate = (actual_submissions / total_expected_submissions * 100) if total_expected_submissions > 0 else 0
+    
+    # Calculate at-risk students (score < 70)
+    student_scores = {}
+    for sub in quiz_submissions:
+        if sub.student_id not in student_scores:
+            student_scores[sub.student_id] = []
+        student_scores[sub.student_id].append(sub.score)
+    
+    for sub in essay_submissions:
+        if sub.student_id not in student_scores:
+            student_scores[sub.student_id] = []
+        essay_score = sub.ai_feedback.get('overall_score', 70) if sub.ai_feedback else 70
+        student_scores[sub.student_id].append(essay_score)
+    
+    at_risk_students = 0
+    for student_id, scores in student_scores.items():
+        avg_score = sum(scores) / len(scores)
+        if avg_score < 70:
+            at_risk_students += 1
+    
+    # Quiz performance data
+    quiz_performance = []
+    for quiz in teacher_quizzes:
+        quiz_subs = [sub for sub in quiz_submissions if sub.quiz_id == quiz.id]
+        if quiz_subs:
+            avg_score = sum(sub.score for sub in quiz_subs) / len(quiz_subs)
+            quiz_performance.append({
+                "question": quiz.title[:20] + "...",
+                "correct": avg_score,
+                "incorrect": 100 - avg_score,
+                "difficulty": "Easy" if avg_score > 80 else "Medium" if avg_score > 60 else "Hard"
+            })
+    
+    # Class progress over time (last 6 weeks)
+    class_progress = []
+    for i in range(6, 0, -1):
+        week_ago = datetime.now() - timedelta(weeks=i)
+        week_subs = [sub for sub in quiz_submissions if sub.submitted_at >= week_ago]
+        if week_subs:
+            week_avg = sum(sub.score for sub in week_subs) / len(week_subs)
+            class_progress.append({
+                "name": f"Week {i}",
+                "average": week_avg
+            })
+    
+    # Assignment status
+    assignment_status = [
+        {"name": "Completed", "value": len(quiz_submissions) + len(essay_submissions), "color": "#8b5cf6"},
+        {"name": "In Progress", "value": total_expected_submissions - (len(quiz_submissions) + len(essay_submissions)), "color": "#06b6d4"},
+        {"name": "Not Started", "value": max(0, total_assignments - total_expected_submissions), "color": "#6b7280"}
+    ]
+    
+    # Subject performance (mock data - you can categorize quizzes by title)
+    subject_performance = [
+        {"subject": "Math", "average": 78, "trend": "up"},
+        {"subject": "Science", "average": 82, "trend": "up"},
+        {"subject": "History", "average": 65, "trend": "down"},
+        {"subject": "English", "average": 74, "trend": "up"}
+    ]
+    
+    # Problem areas
+    problem_areas = [
+        {"topic": "Fractions", "failRate": 65, "students": 16},
+        {"topic": "Essay Structure", "failRate": 45, "students": 11},
+        {"topic": "Historical Dates", "failRate": 58, "students": 14},
+        {"topic": "Grammar", "failRate": 38, "students": 9}
+    ]
+    
+    return schemas.TeacherOverviewResponse(
+        total_students=total_students,
+        average_score=round(average_score, 1),
+        completion_rate=round(completion_rate, 1),
+        at_risk_students=at_risk_students,
+        quiz_performance=quiz_performance,
+        class_progress=class_progress,
+        assignment_status=assignment_status,
+        subject_performance=subject_performance,
+        problem_areas=problem_areas
+    )
+
+@teacher.get("/analytics/students", response_model=List[schemas.StudentAnalyticsResponse])
+async def get_student_analytics_list(
+    current_user: models.User = Depends(get_teacher_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed analytics for all students"""
+    
+    # Get teacher's assignments
+    teacher_quizzes = db.query(models.Quiz).filter(models.Quiz.teacher_id == current_user.id).all()
+    teacher_essays = db.query(models.Essay).filter(models.Essay.teacher_id == current_user.id).all()
+    
+    quiz_ids = [quiz.id for quiz in teacher_quizzes]
+    essay_ids = [essay.id for essay in teacher_essays]
+    
+    # Get all submissions
+    quiz_submissions = db.query(models.QuizSubmission).filter(
+        models.QuizSubmission.quiz_id.in_(quiz_ids)
+    ).all() if quiz_ids else []
+    
+    essay_submissions = db.query(models.EssaySubmission).filter(
+        models.EssaySubmission.essay_id.in_(essay_ids)
+    ).all() if essay_ids else []
+    
+    # Group submissions by student
+    student_data = {}
+    for sub in quiz_submissions:
+        if sub.student_id not in student_data:
+            student_data[sub.student_id] = {"quiz_scores": [], "essay_scores": []}
+        student_data[sub.student_id]["quiz_scores"].append(sub.score)
+    
+    for sub in essay_submissions:
+        if sub.student_id not in student_data:
+            student_data[sub.student_id] = {"quiz_scores": [], "essay_scores": []}
+        essay_score = sub.ai_feedback.get('overall_score', 70) if sub.ai_feedback else 70
+        student_data[sub.student_id]["essay_scores"].append(essay_score)
+    
+    # Get student details and calculate analytics
+    result = []
+    for student_id, data in student_data.items():
+        student = db.query(models.User).filter(models.User.id == student_id).first()
+        if not student:
+            continue
+            
+        quiz_scores = data["quiz_scores"]
+        essay_scores = data["essay_scores"]
+        all_scores = quiz_scores + essay_scores
+        
+        if all_scores:
+            overall_score = sum(all_scores) / len(all_scores)
+        else:
+            overall_score = 0
+        
+        # Determine strengths and weaknesses based on performance
+        strengths = []
+        weaknesses = []
+        
+        if quiz_scores and sum(quiz_scores) / len(quiz_scores) > 80:
+            strengths.append("Quiz Performance")
+        elif quiz_scores and sum(quiz_scores) / len(quiz_scores) < 60:
+            weaknesses.append("Quiz Performance")
+            
+        if essay_scores and sum(essay_scores) / len(essay_scores) > 80:
+            strengths.append("Writing Skills")
+        elif essay_scores and sum(essay_scores) / len(essay_scores) < 60:
+            weaknesses.append("Writing Skills")
+        
+        result.append(schemas.StudentAnalyticsResponse(
+            student_id=student_id,
+            student_name=student.name,
+            overall_score=round(overall_score, 1),
+            quiz_count=len(quiz_scores),
+            essay_count=len(essay_scores),
+            strengths=strengths,
+            weaknesses=weaknesses
+        ))
+    
+    return result
+
+@teacher.get("/analytics/quiz/{quiz_id}", response_model=schemas.QuizAnalyticsResponse)
+async def get_quiz_detailed_analytics(
+    quiz_id: int,
+    current_user: models.User = Depends(get_teacher_user),
+    db: Session = Depends(get_db)
+):
+    """Get detailed analytics for a specific quiz"""
+    
+    quiz = db.query(models.Quiz).filter(
+        models.Quiz.id == quiz_id,
+        models.Quiz.teacher_id == current_user.id
+    ).first()
+    
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    submissions = db.query(models.QuizSubmission).filter(
+        models.QuizSubmission.quiz_id == quiz_id
+    ).all()
+    
+    if not submissions:
+        return schemas.QuizAnalyticsResponse(
+            quiz_id=quiz_id,
+            total_submissions=0,
+            average_score=0,
+            question_analytics=[]
+        )
+    
+    total_submissions = len(submissions)
+    average_score = sum(sub.score for sub in submissions) / total_submissions
+    
+    # Question analytics (mock - in real implementation, you'd analyze each question)
+    question_analytics = []
+    for i, question in enumerate(quiz.questions):
+        # Simulate question performance based on overall score
+        correct_percentage = max(40, min(95, average_score + (i * 5 - 10)))
+        question_analytics.append({
+            "question_id": i + 1,
+            "correct_percentage": correct_percentage,
+            "difficulty_level": "Easy" if correct_percentage > 70 else "Medium" if correct_percentage > 50 else "Hard"
+        })
+    
+    return schemas.QuizAnalyticsResponse(
+        quiz_id=quiz_id,
+        total_submissions=total_submissions,
+        average_score=round(average_score, 1),
+        question_analytics=question_analytics
+    )    

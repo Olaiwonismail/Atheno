@@ -139,3 +139,30 @@ class DashboardResponse(BaseModel):
     pending_quizzes_list: List[Quiz]
     pending_essays_list: List[Essay]
     recent_activity: List[Dict[str, Any]]
+
+
+class QuizAnalyticsResponse(BaseModel):
+    quiz_id: int
+    total_submissions: int
+    average_score: float
+    question_analytics: List[Dict[str, Any]]
+
+class StudentAnalyticsResponse(BaseModel):
+    student_id: int
+    student_name: str
+    overall_score: float
+    quiz_count: int
+    essay_count: int
+    strengths: List[str]
+    weaknesses: List[str]
+
+class TeacherOverviewResponse(BaseModel):
+    total_students: int
+    average_score: float
+    completion_rate: float
+    at_risk_students: int
+    quiz_performance: List[Dict[str, Any]]
+    class_progress: List[Dict[str, Any]]
+    assignment_status: List[Dict[str, Any]]
+    subject_performance: List[Dict[str, Any]]
+    problem_areas: List[Dict[str, Any]]
