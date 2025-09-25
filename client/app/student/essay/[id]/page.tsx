@@ -34,7 +34,7 @@ export default function SubmitEssay() {
     const fetchEssay = async () => {
       try {
         const token = await getAuthToken()
-        const response = await fetch(`https://atheno.onrender.com/essays/${essayId}`, {
+        const response = await fetch(`https://atheno-1.onrender.com/essays/${essayId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -78,7 +78,7 @@ export default function SubmitEssay() {
     setSubmitting(true)
     try {
       const token = await getAuthToken()
-      const response = await fetch(`https://atheno.onrender.com/essays/${essayId}/submit`, {
+      const response = await fetch(`https://atheno-1.onrender.com/essays/${essayId}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +111,7 @@ export default function SubmitEssay() {
 
     try {
       const token = await getAuthToken()
-      const response = await fetch(`https://atheno.onrender.com/essays/${essayId}/draft`, {
+      const response = await fetch(`https://atheno-1.onrender.com/essays/${essayId}/draft`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

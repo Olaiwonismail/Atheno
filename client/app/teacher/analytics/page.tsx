@@ -60,7 +60,7 @@ export default function TeacherAnalytics() {
         // For now, we'll use mock data structure but with real API calls when quiz IDs are available
 
         // This would be the real implementation:
-        // const quizResponse = await fetch(`https://atheno.onrender.com/analytics/quiz/${quizId}`, {
+        // const quizResponse = await fetch(`https://atheno-1.onrender.com/analytics/quiz/${quizId}`, {
         //   headers: { Authorization: `Bearer ${token}` }
         // })
 

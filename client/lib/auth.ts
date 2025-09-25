@@ -20,7 +20,7 @@ export const signUp = async (email: string, password: string, name: string, role
 
     // Register user with backend
     const token = await user.getIdToken()
-    const response = await fetch("https://atheno.onrender.com/auth/register", {
+    const response = await fetch("https://atheno-1.onrender.com/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -52,7 +52,7 @@ export const signIn = async (email: string, password: string) => {
     const token = await user.getIdToken()
 
     // Get user data from backend
-    const response = await fetch("https://atheno.onrender.com/auth/me", {
+    const response = await fetch("https://atheno-1.onrender.com/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

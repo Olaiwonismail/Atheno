@@ -51,7 +51,7 @@ export default function TeacherDashboard() {
         }
 
         // Fetch quizzes with proper authorization
-        const quizzesResponse = await fetch('https://atheno.onrender.com/teacher/quizzes', {
+        const quizzesResponse = await fetch('https://atheno-1.onrender.com/teacher/quizzes', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -67,7 +67,7 @@ export default function TeacherDashboard() {
         setQuizzes(quizzesData)
 
         // Fetch essays with proper authorization
-        const essaysResponse = await fetch('https://atheno.onrender.com/teacher/essays', {
+        const essaysResponse = await fetch('https://atheno-1.onrender.com/teacher/essays', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -83,7 +83,7 @@ export default function CreateEssay() {
 
       console.log("Sending request body:", requestBody)
 
-      const response = await fetch("https://atheno.onrender.com/essays/", {
+      const response = await fetch("https://atheno-1.onrender.com/essays/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

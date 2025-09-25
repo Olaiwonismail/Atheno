@@ -65,7 +65,7 @@ export default function CreateQuiz() {
 
     try {
       const token = await getAuthToken()
-      const response = await fetch("https://atheno.onrender.com/quizzes/", {
+      const response = await fetch("https://atheno-1.onrender.com/quizzes/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
