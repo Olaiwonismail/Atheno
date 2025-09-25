@@ -1,5 +1,6 @@
 # Use an official Python image
-FROM python:3.11-bookworm
+FROM python:3.11-slim-bullseye
+
 
 
 # Set environment vars
