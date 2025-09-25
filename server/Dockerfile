@@ -1,5 +1,6 @@
 # Use an official Python image
-FROM python:3.11-slim-bullseye
+FROM gcr.io/distroless/python3-debian11
+# use gcr.io/distroless/python3-debian11 for a minimal image without package manager
 
 
 
