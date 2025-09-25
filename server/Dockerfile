@@ -1,5 +1,6 @@
 # Use an official Python image
-FROM python:3.11-slim
+FROM FROM python:3.11-bookworm
+
 
 # Set environment vars
 ENV PYTHONDONTWRITEBYTECODE=1

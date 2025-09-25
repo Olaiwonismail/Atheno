@@ -83,8 +83,9 @@ export default function CreateQuiz() {
       })
 
       if (response.ok) {
-        alert("Quiz created successfully!")
+        alert(`Quiz created successfully! `)
         setTitle("")
+        
         setDescription("")
         setQuestions([])
       } else {
